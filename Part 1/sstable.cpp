@@ -1,6 +1,9 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <cstring>
+#include <fcntl.h>
+#include <unistd.h>
 
 // TODO: consider fd management, should we keep it open or close after each operation?
 // currently keeping it open for simplicity
@@ -8,7 +11,7 @@ template <typename K, typename V>
 class SSTable {
     std::string filepath_;
     int fd_;
-    int maxSize_; // number of entries when memtable flushes
+    size_t maxSize_; // number of entries when memtable flushes
     size_t pairSize_ = sizeof(K) + sizeof(V); // Assuming fixed-size K and V for simplicity
     
     std::pair<K, V> readPair(size_t index) const {
@@ -28,7 +31,7 @@ class SSTable {
     }
 
 public:
-    SSTable(const std::string& filepath, int maxSize) : filepath_(filepath), maxSize_(maxSize) {
+    SSTable(const std::string& filepath, size_t maxSize) : filepath_(filepath), maxSize_(maxSize) {
         fd_ = open(filepath.c_str(), O_RDONLY); // may not exist yet, giving -1, handled in get/scan
     }
 
@@ -52,9 +55,9 @@ public:
 
     }
 
-    std::optional<V> get(const K& key) const {
+    V* get(const K& key) const {
         if (fd_ == -1)
-            return std::nullopt;
+            return nullptr;
 
         // left and right are indices of the entries
         size_t left = 0;
@@ -65,16 +68,16 @@ public:
             auto [midKey, midVal] = readPair(mid);
 
             if (midKey == key)
-                return midVal;
+                return &midVal;
             if (midKey < key)
                 left = mid + 1;
             else
                 right = mid;
         }
-        return std::nullopt;
+        return nullptr;
     }
 
-    std::vector<std::pair<K, V>> scan(const K& start, const K& end) const {
+    std::vector<std::pair<K, V>> scan(const K& start, const K& end) {
         std::vector<std::pair<K, V>> result;
         if (fd_ == -1)
             return result; // return empty if file doesn't exist
@@ -102,6 +105,6 @@ public:
         return result;
     }
 
-    const std::string& path() const { return filepath_; }
+    const std::string& path() { return filepath_; }
 };
 

@@ -1,5 +1,6 @@
-#include <iostream>
 #include <algorithm>
+#include <vector>
+#include <functional>
 
 // Template AVL tree class for generic key, value types
 // and generic comparison operator type
@@ -9,8 +10,10 @@ class AVLTree {
     struct Node{
         K key; 
         V value;
-        Node* left = nullptr, Node* right = nullptr;
-    }
+        Node* left = nullptr;
+        Node* right = nullptr;
+        int height = 0;
+    };
 
     Node* root = nullptr;
     Comp comp;
@@ -18,7 +21,7 @@ class AVLTree {
     // return height of a given node
     int height(Node* n) {
         if (n->height) {
-            return n;
+            return n->height;
         }
         return 0;
     }
@@ -71,26 +74,26 @@ class AVLTree {
     Node* insert(Node* n, const K& key, const V& value) {
         if (!n) return new Node{key, value};
         
-        // if key < node->key, insert to the left
-        if (comp(key, node->key)) {
-            node->left = insert(node->left, key, value);
+        // if key < n->key, insert to the left
+        if (comp(key, n->key)) {
+            n->left = insert(n->left, key, value);
         }
         
-        if (comp(node->key, key)) {
-            node->right = insert(node->right, key, value);
+        if (comp(n->key, key)) {
+            n->right = insert(n->right, key, value);
         }
         
         // overwrite the value if the key is the same
         else {
-            node->value = value;
-            return node;
+            n->value = value;
+            return n;
         }
 
         updateHeight(n);
         int bf = balanceFactor(n);
 
         // Left left 
-        if (bf > 1 && comp(key, node->left->key)) {
+        if (bf > 1 && comp(key, n->left->key)) {
             return rightRotate(n);
         }
 
@@ -121,16 +124,17 @@ class AVLTree {
 
         if (comp(key, n->key)) search(n->left, key);
         else {
-            search(n->right, key):
+            search(n->right, key);
         }
     }
     
     // inorder traversal -> will use to flush memtable
-    void inorder(Node* n) const {
+    // helper for recursion
+    void inorderHelper(Node* n, std::vector<std::pair<K, V>>& result) {
         if (!n) return;
-        inorder(n->left);
-        std::cout << n->key << " : " << n->value << "\n";
-        inorder(n->right);
+        inorderHelper(n->left, result);
+        result.emplace_back(n->key, n->value); // emplace back to avoid making copy
+        inorderHelper(n->right, result);
     }
 public:
     void put(const K& key, const V& value) {
@@ -141,8 +145,10 @@ public:
         if (n) return &(n->value);
         return nullptr;
     }
-    void inorder() const {
-        inorder(root);
+    std::vector<std::pair<K, V>> inorder() {
+        std::vector<std::pair<K, V>> result;
+        inorderHelper(root, result);
+        return result;
     }
     ~AVLTree() {
         // implement a destructor to free memory

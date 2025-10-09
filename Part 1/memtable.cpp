@@ -1,9 +1,9 @@
-#include "avl_main.cpp"
+#include "avltree.cpp"
 #include <vector>
 
 template <typename K, typename V>
 class MemTable {
-    // TODO: decide if naming convention
+    // TODO: decide on naming convention
     AVLTree<K, V> tree_;
     size_t currSize_;
     size_t maxSize_; 
@@ -19,13 +19,13 @@ class MemTable {
             if (isFull()) {
                 throw std::runtime_error("MemTable is full");
             }
-            tree_.insert(key, value);
+            tree_.put(key, value);
             ++currSize_; // TODO: consider how size is tracked, currently just counting entries
         }
 
         // TODO: should we be using const everywhere?
-        V* get (const K& key) const {
-            return tree_.search(key);
+        V* get (const K& key) {
+            return tree_.get(key);
         }
 
         std::vector<std::pair<K, V>> scan(K& startKey, K& endKey) const {
@@ -38,9 +38,14 @@ class MemTable {
             return result;
         }
 
+        std::vector<std::pair<K, V>> inorder() {
+            return tree_.inorder();
+        }
+
         // TODO: decide if we want to just clear the tree or delete and recreate
         void clear() {
-            tree_.clear();
+            tree_.~AVLTree();
+            tree_ = AVLTree<K,V>();
             currSize_ = 0;
         }
 
