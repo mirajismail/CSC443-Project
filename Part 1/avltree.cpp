@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <vector>
 #include <functional>
+#include <iostream>
 
 // Template AVL tree class for generic key, value types
 // and generic comparison operator type
@@ -20,10 +21,8 @@ class AVLTree {
 
     // return height of a given node
     int height(Node* n) {
-        if (n->height) {
-            return n->height;
-        }
-        return 0;
+        if (!n) return 0;
+        return n->height;
     }
 
     // update the height of a given node based off height of its children
@@ -120,7 +119,7 @@ class AVLTree {
     // search for a node
     Node* search(Node* n, const K& key) {
         if (!n) return nullptr;
-        if (!comp(key, n->key) && !comp(n->key, key)) return nullptr;
+        if (!comp(key, n->key) && !comp(n->key, key)) return n;
 
         if (comp(key, n->key)) search(n->left, key);
         else {
@@ -139,9 +138,12 @@ class AVLTree {
 public:
     void put(const K& key, const V& value) {
         root = insert(root, key, value);
+        // std::cout << "root - key: " << root->key << ", val: " << root->value << std::endl;
     }
     V* get(const K& key) {
         Node* n = search(root, key);
+        // if (n) std::cout << "get - key: " << n->key << ", val: " << n->value << std::endl;
+        // else std::cout << "couldn't find key " << key << std::endl;
         if (n) return &(n->value);
         return nullptr;
     }

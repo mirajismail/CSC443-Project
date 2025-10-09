@@ -1,6 +1,6 @@
 # Compiler and flags
 CXX = g++
-CXXFLAGS = -Wall -Wextra -std=c++17
+CXXFLAGS = -Wall -Wextra -std=c++17 -g
 
 # Source files
 SRCS = kvstore.cpp memtable.cpp sstable.cpp avltree.cpp test.cpp
@@ -24,6 +24,6 @@ $(TEST_EXE): test.o memtable.o sstable.o avltree.o kvstore.o
 
 # Clean build files
 clean:
-	rm -f *.o $(TEST_EXE)
+	rm -f *.o $(TEST_EXE) teststore_*
 
 .PHONY: all clean

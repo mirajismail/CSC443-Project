@@ -2,6 +2,7 @@
 #include <vector>
 #include "sstable.cpp"
 #include "memtable.cpp"
+#include <iostream>
 
 template <typename K, typename V>
 class KVStore {
@@ -42,6 +43,7 @@ class KVStore {
         
         void put(const K& key, const V& value) {
             memTable.put(key, value); // TODO: decide to check first or after
+            std::cout << "memtable size is " << memTable.size() << " after put" << std::endl;
             if (memTable.isFull()) {
                 // flush memtable to disk
                 std::string filename = dbName + "_" + std::to_string(sstIndex); // TODO: decide naming convention
@@ -57,6 +59,7 @@ class KVStore {
         V* get(const K& key) {
             V* value = memTable.get(key);
             if (value) return value;
+            std::cout << "checking ssts" << std::endl;
             for (auto it = sstables.rbegin(); it != sstables.rend(); ++it) { // search from newest at the end, to oldest at the front
                 value = it->get(key);
                 if (value) return value;

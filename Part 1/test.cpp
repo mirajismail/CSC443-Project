@@ -4,37 +4,41 @@
 
 int main() {
     // Instantiate kvstore<int, int>
-    size_t size = 10;
+    size_t size = 5;
     KVStore<int, int> store {size};
 
     // Test open
     store.open("teststore");
+    std::cout << "opened" << std::endl;
 
-    // Test put
-    store.put(1, 100);
-    store.put(2, 200);
-
-    // Test get
-    int* value;
-    value = store.get(1);
-    if (value) {
-        std::cout << "Key 1 found, value: " << *value << std::endl;
-    } else {
-        std::cout << "Key 1 not found." << std::endl;
+    for (int i = 0; i < 9; i++) {
+        store.put(i, i*100);
     }
 
-    value = store.get(2);
-    if (value) {
-        std::cout << "Key 2 found, value: " << *value << std::endl;
-    } else {
-        std::cout << "Key 2 not found." << std::endl;
+    int* val;
+    for (int i = 0; i < 10; i++) {
+        val = store.get(i);
+        if (val) {
+            std::cout << "Key " << i << " found, value: " << *val << std::endl;
+        } else {
+            std::cout << "Key " << i << " not found." << std::endl;
+        }
     }
 
-    value = store.get(3);
-    if (value) {
-        std::cout << "Key 3 found, value: " << *value << std::endl;
+    // Does not handle duplicate values
+    store.put(0, 100);
+    val = store.get(0);
+    if (val) {
+        std::cout << "Key " << 0 << " found, value: " << *val << std::endl;
     } else {
-        std::cout << "Key 3 not found." << std::endl;
+        std::cout << "Key " << 0 << " not found." << std::endl;
+    }
+
+    val = store.get(5);
+    if (val) {
+        std::cout << "Key " << 5 << " found, value: " << *val << std::endl;
+    } else {
+        std::cout << "Key " << 5 << " not found." << std::endl;
     }
 
     return 0;

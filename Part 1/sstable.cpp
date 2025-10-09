@@ -4,6 +4,7 @@
 #include <cstring>
 #include <fcntl.h>
 #include <unistd.h>
+#include <iostream>
 
 // TODO: consider fd management, should we keep it open or close after each operation?
 // currently keeping it open for simplicity
@@ -27,6 +28,7 @@ class SSTable {
         V value;
         std::memcpy(&key, buffer, sizeof(K));
         std::memcpy(&value, buffer + sizeof(K), sizeof(V));
+        // std::cout << "readPair read key: " << key << ", val " << value << " from " << filepath_ << std::endl; 
         return {key, value};
     }
 
@@ -37,6 +39,12 @@ public:
 
     // Write SST from sorted Key-Value pairs to disk
     void writeFromPairs(const std::vector<std::pair<K, V>>& entries) {
+        std::cout << "flushing ";
+        for (const auto [k,v] : entries) {
+            std::cout << "(" << k << "," << v << "), ";
+        }
+        std::cout << "to " << filepath_ << std::endl; 
+
         std::ofstream file(filepath_, std::ios::trunc | std::ios::binary);
         if (!file.is_open()) {
             throw std::runtime_error("Could not open " + filepath_ + " for writing");
@@ -68,7 +76,7 @@ public:
             auto [midKey, midVal] = readPair(mid);
 
             if (midKey == key)
-                return &midVal;
+                return new V(midVal);
             if (midKey < key)
                 left = mid + 1;
             else
