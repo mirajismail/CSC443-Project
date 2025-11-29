@@ -44,8 +44,10 @@ class MemTable {
 
         // TODO: decide if we want to just clear the tree or delete and recreate
         void clear() {
-            tree_.~AVLTree();
-            tree_ = AVLTree<K,V>();
+            // tree_.~AVLTree();
+            // tree_ = AVLTree<K,V>();
+            // currSize_ = 0;
+            tree_ = AVLTree<K, V>();
             currSize_ = 0;
         }
 
@@ -54,7 +56,7 @@ class MemTable {
         }
 
         ~MemTable() {
-            clear();
+            // clear();
         }
 
 };

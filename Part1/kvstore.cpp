@@ -3,6 +3,7 @@
 #include "sstable.cpp"
 #include "memtable.cpp"
 #include <iostream>
+#include "../Part2/buffer_pool.hpp"
 
 template <typename K, typename V>
 class KVStore {
@@ -10,6 +11,7 @@ class KVStore {
     size_t memTableSize;
     std::vector<SSTable<K, V>> sstables;
     MemTable<K, V> memTable;
+    BufferPool bufferPool;
     int sstIndex = 0; // to track sst file naming
 
     void loadSSTables() {
@@ -19,7 +21,7 @@ class KVStore {
             std::string filename = dbName + "_" + std::to_string(index); // TODO: decide naming scheme
             std::ifstream infile(filename);
             if (!infile.is_open()) break; // no more ssts
-            SSTable<K, V> sst {filename, memTableSize};
+            SSTable<K, V> sst {filename, memTableSize, &bufferPool};
             sstables.push_back(sst); // TODO: decide to push or insert at front
             index++;
         }
@@ -27,7 +29,16 @@ class KVStore {
     }
 
     public:
-        KVStore(size_t memTableSize) : memTableSize(memTableSize), memTable(memTableSize) {}
+        KVStore(size_t memTableSize, size_t bufferPoolFrames): 
+            memTableSize(memTableSize), 
+            memTable(memTableSize),
+            bufferPool(bufferPoolFrames) 
+            {}
+
+        BufferPool& getBufferPool() {
+            return bufferPool;
+        }
+
 
         void open(const std::string& name) {
             dbName = name;
@@ -48,7 +59,7 @@ class KVStore {
                 // flush memtable to disk
                 std::string filename = dbName + "_" + std::to_string(sstIndex); // TODO: decide naming convention
                 std::vector<std::pair<K,V>> pairs = memTable.inorder();
-                SSTable<K, V> sst {filename, memTableSize};
+                SSTable<K, V> sst {filename, memTableSize, &bufferPool};
                 sst.writeFromPairs(pairs);
                 sstables.push_back(sst); // TODO: decide to push or insert at front
                 memTable.clear();

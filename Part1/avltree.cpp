@@ -72,18 +72,17 @@ class AVLTree {
     // insert a new node - we will use this method for implementing "put"
     Node* insert(Node* n, const K& key, const V& value) {
         if (!n) return new Node{key, value};
-        
-        // if key < n->key, insert to the left
+
         if (comp(key, n->key)) {
+            // key < n->key
             n->left = insert(n->left, key, value);
         }
-        
-        if (comp(n->key, key)) {
+        else if (comp(n->key, key)) {
+            // key > n->key
             n->right = insert(n->right, key, value);
         }
-        
-        // overwrite the value if the key is the same
         else {
+            // equal key: overwrite value
             n->value = value;
             return n;
         }
@@ -91,23 +90,23 @@ class AVLTree {
         updateHeight(n);
         int bf = balanceFactor(n);
 
-        // Left left 
+        // Left-left
         if (bf > 1 && comp(key, n->left->key)) {
             return rightRotate(n);
         }
 
-        // Right right
+        // Right-right
         if (bf < -1 && comp(n->right->key, key)) {
             return leftRotate(n);
         }
 
-        // Left right
+        // Left-right
         if (bf > 1 && comp(n->left->key, key)) {
-                n->left = leftRotate(n->left);
-                return rightRotate(n);
+            n->left = leftRotate(n->left);
+            return rightRotate(n);
         }
 
-        // Right left
+        // Right-left
         if (bf < -1 && comp(key, n->right->key)) {
             n->right = rightRotate(n->right);
             return leftRotate(n);
@@ -116,16 +115,23 @@ class AVLTree {
         return n;
     }
 
+
     // search for a node
     Node* search(Node* n, const K& key) {
         if (!n) return nullptr;
-        if (!comp(key, n->key) && !comp(n->key, key)) return n;
 
-        if (comp(key, n->key)) search(n->left, key);
-        else {
-            search(n->right, key);
+        // equal if neither a<b nor b<a
+        if (!comp(key, n->key) && !comp(n->key, key)) {
+            return n;
+        }
+
+        if (comp(key, n->key)) {
+            return search(n->left, key);
+        } else {
+            return search(n->right, key);
         }
     }
+
     
     // inorder traversal -> will use to flush memtable
     // helper for recursion
