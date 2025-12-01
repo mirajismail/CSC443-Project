@@ -1,22 +1,11 @@
-/* 
-Buffer pool:
-- (filename, page offset) -> 4KB page
-- metadata for eviction
-
-abstraction:
-shouldn't read from disk directly
-buffer_pool.getPage(page_id)
-*/
-
 #pragma once
-
 #include <string>
 #include <vector>
 #include <cstdint>
 
 struct PageId {
     std::string file;  // SST filename
-    uint64_t offset;   // byte offset in the file (should be 4KB-aligned)
+    uint64_t offset;   // byte offset in the file (4kB aligned)
 
     bool operator==(const PageId& other) const {
         return offset == other.offset && file == other.file;
@@ -28,11 +17,9 @@ public:
     static constexpr size_t PAGE_SIZE = 4096;
 
     explicit BufferPool(size_t capacityFrames);
-
-    // Main API: returns pointer to 4KB page bytes.
-    // Pointer remains valid until the page is evicted.
     const char* getPage(const PageId& pid);
-    // Statistics (public for testing)
+
+    // stats for testing
     size_t hits = 0;
     size_t misses = 0;
     size_t evictions = 0;
@@ -47,33 +34,33 @@ public:
     size_t capacity() const { return capacityFrames; }
 
 private:
-    struct Frame {
+    struct alignas(4096) Frame { // destination buffer must be aligned to 4 KB
         PageId id;
         bool valid = false;
         bool referenced = false;
-        bool dirty = false;     // unused for Step 2
         char data[PAGE_SIZE];
 
         // hash table chaining
         Frame* hashNext = nullptr;
 
-        // CLOCK circular list
+        // clock circular list
         Frame* clockPrev = nullptr;
         Frame* clockNext = nullptr;
     };
 
     std::vector<Frame> frames;
     size_t capacityFrames;
-    size_t usedFrames;            // number of frames that have ever been allocated
+    size_t usedFrames;  // number of frames that have ever been allocated
 
-    std::vector<Frame*> table;    // hash buckets
-    Frame* clockHand;             // current position for CLOCK
+    std::vector<Frame*> table; // hash buckets
+    Frame* clockCur; // current position for clock eviction
 
-    // --- internal helpers ---
+
+    // helper methods
 
     Frame* lookup(const PageId& pid);
-    Frame* allocateNewFrame();    // for usedFrames < capacityFrames
-    Frame* evictOne();            // CLOCK eviction, returns reusable frame*
+    Frame* allocateNewFrame(); // for usedFrames < capacityFrames
+    Frame* evictOne(); // clock eviction, returns reusable frame*
 
     Frame* loadPageIntoFrame(Frame* f, const PageId& pid);
 

@@ -2,7 +2,6 @@
 CXX = g++
 CXXFLAGS = -Wall -Wextra -std=c++17 -g
 
-# Source files (explicitly list them where they currently are)
 # Source files
 SRCS = \
     Part1/kvstore.cpp \
@@ -10,7 +9,8 @@ SRCS = \
     Part1/sstable.cpp \
     Part1/avltree.cpp \
     Part2/buffer_pool.cpp \
-    Part1/test.cpp
+    Part1/test.cpp \
+    Part2/xxhash.c \
 
 # Object files
 OBJS = $(SRCS:.cpp=.o)
@@ -31,6 +31,6 @@ $(TEST_EXE): $(OBJS)
 
 # Clean
 clean:
-	rm -f Part\ 1/*.o Part\ 2/*.o $(TEST_EXE) teststore_*
+	rm -f Part1/*.o Part2/*.o $(TEST_EXE) teststore_* sst_b*
 
 .PHONY: all clean
