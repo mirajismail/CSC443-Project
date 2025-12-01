@@ -1,77 +1,115 @@
 #include <string>
 #include <vector>
+#include <map>
+#include <sys/stat.h>
 #include "sstable.cpp"
 #include "memtable.cpp"
-#include <iostream>
 
 template <typename K, typename V>
 class KVStore {
-    std::string dbName;
-    size_t memTableSize;
-    std::vector<SSTable<K, V>> sstables;
-    MemTable<K, V> memTable;
-    int sstIndex = 0; // to track sst file naming
+    std::string db_name_;
+    size_t memtable_size_;
+    std::vector<SSTable<K, V>> sstables_;
+    MemTable<K, V> memtable_;
+    int sst_index_ = 0;
 
     void loadSSTables() {
-        // load existing ssts from disk
         int index = 0;
+
         while (true) {
-            std::string filename = dbName + "_" + std::to_string(index); // TODO: decide naming scheme
+            std::string filename = db_name_ + "_" + std::to_string(index);
             std::ifstream infile(filename);
-            if (!infile.is_open()) break; // no more ssts
-            SSTable<K, V> sst {filename, memTableSize};
-            sstables.push_back(sst); // TODO: decide to push or insert at front
+            if (!infile.is_open()) break;
+            SSTable<K, V> sst{filename, memtable_size_};
+            sstables_.push_back(sst);
             index++;
         }
-        sstIndex = index; // next sst index
+
+        sst_index_ = index;
     }
 
-    public:
-        KVStore(size_t memTableSize) : memTableSize(memTableSize), memTable(memTableSize) {}
+public:
+    KVStore(size_t memtable_size) : memtable_size_(memtable_size), memtable_(memtable_size) {}
 
-        void open(const std::string& name) {
-            dbName = name;
-            // TODO: write code to create db directory if not exists
-            loadSSTables();
+    void open(const std::string& name) {
+        db_name_ = name;
+        struct stat st;
+
+        if (stat(db_name_.c_str(), &st) != 0) {
+            mkdir(db_name_.c_str(), 0755); // permissions: rwxr-xr-x
         }
 
-        void close() {
-            // TODO: closing code
-            // flush memtable if not empty
-            memTable.clear();
-        }
-        
-        void put(const K& key, const V& value) {
-            memTable.put(key, value); // TODO: decide to check first or after
-            std::cout << "memtable size is " << memTable.size() << " after put" << std::endl;
-            if (memTable.isFull()) {
-                // flush memtable to disk
-                std::string filename = dbName + "_" + std::to_string(sstIndex); // TODO: decide naming convention
-                std::vector<std::pair<K,V>> pairs = memTable.inorder();
-                SSTable<K, V> sst {filename, memTableSize};
-                sst.writeFromPairs(pairs);
-                sstables.push_back(sst); // TODO: decide to push or insert at front
-                memTable.clear();
-                sstIndex++;
-            }
+        loadSSTables();
+    }
+
+    void close() {
+        // flush memtable to disk if not empty
+        if (memtable_.size() > 0) {
+            std::string filename = db_name_ + "_" + std::to_string(sst_index_);
+            std::vector<std::pair<K,V>> pairs = memtable_.inorder();
+            SSTable<K, V> sst{filename, memtable_size_};
+            sst.writeFromPairs(pairs);
+            sstables_.push_back(sst);
+            memtable_.clear();
+            sst_index_++;
         }
 
-        V* get(const K& key) {
-            V* value = memTable.get(key);
+        for (auto& sst : sstables_) {
+            sst.close();
+        }
+
+        sstables_.clear();
+    }
+
+    void put(const K& key, const V& value) {
+        memtable_.put(key, value);
+
+        if (memtable_.isFull()) {
+            std::string filename = db_name_ + "_" + std::to_string(sst_index_);
+            std::vector<std::pair<K,V>> pairs = memtable_.inorder();
+            SSTable<K, V> sst{filename, memtable_size_};
+            sst.writeFromPairs(pairs);
+            sstables_.push_back(sst);
+            memtable_.clear();
+            sst_index_++;
+        }
+    }
+
+    V* get(const K& key) {
+        V* value = memtable_.get(key);
+        if (value) return value;
+
+        for (auto it = sstables_.rbegin(); it != sstables_.rend(); ++it) {
+            value = it->get(key);
             if (value) return value;
-            std::cout << "checking ssts" << std::endl;
-            for (auto it = sstables.rbegin(); it != sstables.rend(); ++it) { // search from newest at the end, to oldest at the front
-                value = it->get(key);
-                if (value) return value;
-            }
-            return nullptr; // consider throwing exception
         }
 
-        // TODO: implement scan
-        
-        ~KVStore() {
-            // TODO: write cleanup code
+        return nullptr;
+    }
+
+    // scan for keys in range [start_key, end_key]
+    std::vector<std::pair<K, V>> scan(K start_key, K end_key) {
+        std::map<K, V> merged;
+
+        // scan sstables oldest to newwst so newer values overwrite
+        for (auto& sst : sstables_) {
+            auto pairs = sst.scan(start_key, end_key);
+            for (const auto& [k, v] : pairs) {
+                merged[k] = v;
+            }
         }
+
+        // scan memtable last (most recent)
+        auto mem_pairs = memtable_.scan(start_key, end_key);
+        for (const auto& [k, v] : mem_pairs) {
+            merged[k] = v;
+        }
+
+        return std::vector<std::pair<K, V>>(merged.begin(), merged.end());
+    }
+
+    ~KVStore() {
+        close();
+    }
 
 };
-
