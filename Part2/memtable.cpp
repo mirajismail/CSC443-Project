@@ -20,7 +20,7 @@ public:
             throw std::runtime_error("MemTable is full");
         }
         tree_.put(key, value);
-        curr_size_++; // TODO: consider how size is tracked, currently just counting entries
+        curr_size_++;
     }
 
     V* get(const K& key) {
@@ -50,6 +50,4 @@ public:
     size_t size() const {
         return curr_size_;
     }
-
 };
-
