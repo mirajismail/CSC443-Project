@@ -44,6 +44,9 @@ public:
 
     // write sorted pairs sequentially, pad to page boundary
     void writeFromPairs(const std::vector<std::pair<K, V>>& entries) override {
+        // build bloom filter for fast negative lookups
+        this->buildBloomFilter(entries);
+
         std::ofstream file(filepath_, std::ios::trunc | std::ios::binary);
         if (!file.is_open())
             throw std::runtime_error("Could not open " + filepath_);
@@ -65,6 +68,13 @@ public:
 
         file.close();
 
+        // write bloom filter to companion file
+        std::ofstream bloom_file(filepath_ + ".bloom", std::ios::trunc | std::ios::binary);
+        if (bloom_file.is_open()) {
+            this->writeBloomToFile(bloom_file);
+            bloom_file.close();
+        }
+
         if (fd_ != -1) close(fd_);
         fd_ = open(filepath_.c_str(), openFlags_);
         if (fd_ == -1)
@@ -74,6 +84,9 @@ public:
     // binary search over sorted entries
     V* get(const K& key) const override {
         if (fd_ == -1) return nullptr;
+
+        // bloom filter check
+        if (!this->contains(key)) return nullptr;
 
         size_t left = 0;
         size_t right = maxSize_;

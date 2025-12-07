@@ -244,10 +244,23 @@ public:
         : SSTBase<K, V>(filepath, maxSize, bp, useDirect) {}
 
     void writeFromPairs(const std::vector<std::pair<K, V>>& entries) override {
+        // build bloom filter for fast negative lookups
+        this->buildBloomFilter(entries);
+
         writeBTree(entries);
+
+        // write bloom filter to file
+        std::ofstream bloom_file(filepath_ + ".bloom", std::ios::trunc | std::ios::binary);
+        if (bloom_file.is_open()) {
+            this->writeBloomToFile(bloom_file);
+            bloom_file.close();
+        }
     }
 
     V* get(const K& key) const override {
+        // bloom filter check
+        if (!this->contains(key)) return nullptr;
+
         return searchBTree(key);
     }
 

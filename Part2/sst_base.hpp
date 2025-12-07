@@ -56,11 +56,13 @@ public:
           maxSize_(maxSize),
           openFlags_(useDirect ? (O_RDONLY | O_DIRECT) : O_RDONLY)
     {
-        fd_ = ::open(filepath.c_str(), openFlags_);
+        fd_ = open(filepath.c_str(), openFlags_);
     }
 
+    // virtual functions for derived classes
+
     virtual ~SSTBase() {
-        if (fd_ != -1) ::close(fd_);
+        if (fd_ != -1) close(fd_);
     }
 
     virtual void writeFromPairs(const std::vector<std::pair<K, V>>& entries) = 0;
