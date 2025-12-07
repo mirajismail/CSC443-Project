@@ -110,7 +110,7 @@ public:
 
     void close() {
         if (fd_ != -1) {
-            ::close(fd_);
+            ::close(fd_); // use syscall close to not overlap
             fd_ = -1;
         }
     }

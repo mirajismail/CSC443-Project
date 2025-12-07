@@ -1,0 +1,25 @@
+# build artifacts
+*.o
+test
+experiment
+
+# test data
+teststore_*
+exp1_*
+exp2_*
+
+# python venv
+venv/
+__pycache__/
+*.pyc
+
+# jupyter
+.ipynb_checkpoints/
+
+# experiment outputs
+*.png
+
+# editor
+.vscode/
+*.swp
+*~
